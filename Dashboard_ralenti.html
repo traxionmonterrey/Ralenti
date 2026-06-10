@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traxión | Ralentí</title>
+<link rel="icon" type="image/svg+xml" href="favicon-traxion.svg">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Tahoma,Verdana,sans-serif;background:#f3f4f6;}
+
+  /* ── Layout ── */
+  .layout{display:flex;height:100vh;}
+  .sidebar{width:260px;background:#1f2937;color:#fff;padding:20px;overflow-y:auto;flex-shrink:0;}
+  .sidebar h1{color:#84cc16;font-size:22px;margin-bottom:30px;text-align:center;}
+  .menu-group{margin-bottom:25px;}
+  .menu-group-title{font-size:11px;color:#9ca3af;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+  .menu-item{display:flex;align-items:center;gap:11px;padding:12px 15px;margin-bottom:8px;border-radius:8px;
+             color:#e5e7eb;text-decoration:none;font-weight:600;transition:all 0.3s;font-size:14px;}
+  .menu-item svg{flex-shrink:0;width:18px;height:18px;fill:none;stroke:#9ca3af;stroke-width:1.7;
+                 stroke-linecap:round;stroke-linejoin:round;transition:stroke 0.3s;}
+  .menu-item:hover{background:#374151;transform:translateX(5px);}
+  .menu-item:hover svg{stroke:#84cc16;}
+  .menu-item.active{background:#84cc16;color:#1f2937;}
+  .menu-item.active svg{stroke:#1f2937;}
+
+  /* ── Main ── */
+  .main{flex:1;overflow-y:auto;background:#f3f4f6;}
+
+  /* ── Top bar ── */
+  .topbar{background:#1f2937;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .topbar-title{color:#fff;font-size:20px;font-weight:800;letter-spacing:1px;}
+  .topbar-title span{color:#84cc16;}
+  .topbar-date{color:#9ca3af;font-size:13px;}
+
+  /* ── Upload zone ── */
+  .upload-zone{margin:24px 28px 0;border:2px dashed #d1d5db;border-radius:12px;padding:28px;text-align:center;background:#fff;cursor:pointer;transition:all .3s;}
+  .upload-zone:hover{border-color:#84cc16;background:#f7ffe6;}
+  .upload-zone.drag-over{border-color:#84cc16;background:#f7ffe6;}
+  .upload-zone svg{width:40px;height:40px;stroke:#9ca3af;margin-bottom:10px;}
+  .upload-zone p{color:#6b7280;font-size:14px;}
+  .upload-zone strong{color:#1f2937;}
+  #file-input{display:none;}
+  .upload-btn{margin-top:12px;background:#84cc16;color:#1f2937;border:none;padding:9px 22px;border-radius:7px;font-weight:700;font-size:14px;cursor:pointer;}
+
+  /* ── Filters ── */
+  .filters{margin:18px 28px 0;display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+  .filter-group{display:flex;flex-direction:column;gap:4px;}
+  .filter-group label{font-size:11px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
+  .filter-group select,.filter-group input{padding:8px 12px;border:1.5px solid #d1d5db;border-radius:7px;font-size:13px;color:#1f2937;background:#fff;outline:none;min-width:160px;}
+  .filter-group select:focus,.filter-group input:focus{border-color:#84cc16;}
+  .btn-apply{background:#84cc16;color:#1f2937;border:none;padding:9px 20px;border-radius:7px;font-weight:700;font-size:13px;cursor:pointer;align-self:flex-end;}
+  .btn-reset{background:#f3f4f6;color:#6b7280;border:1.5px solid #d1d5db;padding:9px 16px;border-radius:7px;font-weight:600;font-size:13px;cursor:pointer;align-self:flex-end;}
+
+  /* ── KPI cards ── */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:20px 28px 0;}
+  .kpi-card{background:#fff;border-radius:12px;padding:20px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid #84cc16;}
+  .kpi-card.warn{border-left-color:#f59e0b;}
+  .kpi-card.danger{border-left-color:#ef4444;}
+  .kpi-card.info{border-left-color:#3b82f6;}
+  .kpi-label{font-size:11px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;}
+  .kpi-value{font-size:30px;font-weight:900;color:#1f2937;line-height:1;}
+  .kpi-sub{font-size:12px;color:#6b7280;margin-top:5px;}
+
+  /* ── Charts row ── */
+  .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 28px 0;}
+  .chart-card{background:#fff;border-radius:12px;padding:20px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+  .chart-card.full{grid-column:1/-1;}
+  .chart-title{font-size:13px;font-weight:700;color:#1f2937;margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px;}
+  .bar-chart{display:flex;flex-direction:column;gap:10px;}
+  .bar-row{display:flex;align-items:center;gap:10px;}
+  .bar-label{font-size:12px;color:#374151;width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+  .bar-track{flex:1;background:#f3f4f6;border-radius:4px;height:16px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;background:#84cc16;transition:width .5s ease;}
+  .bar-fill.warn{background:#f59e0b;}
+  .bar-fill.danger{background:#ef4444;}
+  .bar-val{font-size:12px;color:#6b7280;width:60px;text-align:right;flex-shrink:0;}
+
+  /* ── UDN donut ── */
+  .donut-wrap{display:flex;align-items:center;gap:24px;}
+  .donut-legend{display:flex;flex-direction:column;gap:10px;}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;}
+  .legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+
+  /* ── Table ── */
+  .table-card{background:#fff;border-radius:12px;padding:20px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin:20px 28px 28px;}
+  .table-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .table-search{padding:7px 12px;border:1.5px solid #d1d5db;border-radius:7px;font-size:13px;outline:none;min-width:220px;}
+  .table-search:focus{border-color:#84cc16;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{background:#f9fafb;color:#6b7280;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.7px;padding:10px 12px;border-bottom:1.5px solid #e5e7eb;text-align:left;}
+  tbody tr{border-bottom:1px solid #f3f4f6;transition:background .15s;}
+  tbody tr:hover{background:#f9fafb;}
+  tbody td{padding:9px 12px;color:#374151;}
+  .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .badge-stp{background:#dcfce7;color:#166534;}
+  .badge-garcia{background:#fef9c3;color:#854d0e;}
+  .badge-lipu{background:#dbeafe;color:#1e40af;}
+  .badge-na{background:#f3f4f6;color:#6b7280;}
+  .dur-low{color:#16a34a;font-weight:600;}
+  .dur-mid{color:#d97706;font-weight:600;}
+  .dur-high{color:#dc2626;font-weight:700;}
+  .pagination{display:flex;gap:6px;justify-content:flex-end;margin-top:14px;align-items:center;}
+  .page-btn{padding:5px 11px;border:1.5px solid #d1d5db;border-radius:6px;background:#fff;font-size:13px;cursor:pointer;color:#374151;}
+  .page-btn.active{background:#84cc16;border-color:#84cc16;color:#1f2937;font-weight:700;}
+  .page-info{font-size:12px;color:#9ca3af;}
+
+  /* ── Empty / loading ── */
+  .empty{text-align:center;padding:60px 20px;color:#9ca3af;}
+  .empty svg{width:48px;height:48px;stroke:#d1d5db;margin-bottom:12px;}
+  .empty p{font-size:15px;}
+  .empty small{font-size:12px;}
+
+  @media(max-width:1100px){.charts-row{grid-template-columns:1fr;}.charts-row .chart-card.full{grid-column:auto;}}
+  @media(max-width:768px){.layout{flex-direction:column}.sidebar{width:100%;max-height:260px}.kpi-grid{margin:16px 14px 0}.filters{margin:14px 14px 0}.charts-row{margin:14px 14px 0}.table-card{margin:14px 14px 20px}}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <h1>TRAXIÓN</h1>
+    <div class="menu-group">
+      <div class="menu-group-title">Logística</div>
+      <a href="Dashboard_ranking.html" class="menu-item">
+        <svg viewBox="0 0 24 24"><path d="M8 19c-3-1.5-5-4.5-5-8s2-5.5 4.5-6.5"/><path d="M7.5 9c-1.5 1.5-1.5 4.5 0 6.5"/><path d="M16 19c3-1.5 5-4.5 5-8s-2-5.5-4.5-6.5"/><path d="M16.5 9c1.5 1.5 1.5 4.5 0 6.5"/><path d="M9 19.5h6"/><circle cx="12" cy="11" r="3"/><path d="M12 9v2l1.5 1"/></svg>
+        Ranking Operador
+      </a>
+      <a href="Dashboard_ranking_coordinador.html" class="menu-item">
+        <svg viewBox="0 0 24 24"><path d="M8 19c-3-1.5-5-4.5-5-8s2-5.5 4.5-6.5"/><path d="M7.5 9c-1.5 1.5-1.5 4.5 0 6.5"/><path d="M16 19c3-1.5 5-4.5 5-8s-2-5.5-4.5-6.5"/><path d="M16.5 9c1.5 1.5 1.5 4.5 0 6.5"/><path d="M9 19.5h6"/><circle cx="12" cy="11" r="3"/><path d="M12 9v2l1.5 1"/></svg>
+        Ranking Coordinador
+      </a>
+      <a href="Dashboard_ralenti.html" class="menu-item active">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Ralentí
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-title">Dashboard <span>Ralentí</span></div>
+      <div class="topbar-date" id="topbar-date">Sin archivo cargado</div>
+    </div>
+
+    <!-- Upload -->
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p><strong>Arrastra el CSV de Ralentí aquí</strong></p>
+      <p>o haz clic para seleccionar el archivo</p>
+      <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('file-input').click()">Seleccionar archivo</button>
+      <input type="file" id="file-input" accept=".csv">
+    </div>
+
+    <!-- Filters -->
+    <div class="filters" id="filters" style="display:none">
+      <div class="filter-group">
+        <label>UDN</label>
+        <select id="f-udn">
+          <option value="">Todas</option>
+          <option>SETTEPI MTY</option>
+          <option>SETTEPI MTY Garcia</option>
+          <option>LIPU MONTERREY</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Operador</label>
+        <input type="text" id="f-driver" placeholder="Buscar operador...">
+      </div>
+      <div class="filter-group">
+        <label>Duración mínima (min)</label>
+        <input type="number" id="f-durmin" value="0" min="0" style="min-width:110px">
+      </div>
+      <div class="filter-group">
+        <label>Cliente (Vehicle Group)</label>
+        <select id="f-vgroup">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <button class="btn-apply" onclick="applyFilters()">Aplicar</button>
+      <button class="btn-reset" onclick="resetFilters()">Limpiar</button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpi-grid" style="display:none">
+      <div class="kpi-card">
+        <div class="kpi-label">Eventos totales</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub">Eventos de ralentí &gt;5 min</div>
+      </div>
+      <div class="kpi-card warn">
+        <div class="kpi-label">Tiempo total ralentí</div>
+        <div class="kpi-value" id="kpi-tiempo">—</div>
+        <div class="kpi-sub">Horas acumuladas</div>
+      </div>
+      <div class="kpi-card danger">
+        <div class="kpi-label">Promedio por evento</div>
+        <div class="kpi-value" id="kpi-prom">—</div>
+        <div class="kpi-sub">Minutos promedio</div>
+      </div>
+      <div class="kpi-card info">
+        <div class="kpi-label">Vehículos afectados</div>
+        <div class="kpi-value" id="kpi-veh">—</div>
+        <div class="kpi-sub">Unidades con ≥1 evento</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Operadores únicos</div>
+        <div class="kpi-value" id="kpi-ops">—</div>
+        <div class="kpi-sub">Con al menos 1 evento</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row" id="charts-row" style="display:none">
+
+      <!-- Top 10 operadores -->
+      <div class="chart-card">
+        <div class="chart-title">Top 10 operadores — tiempo ralentí</div>
+        <div class="bar-chart" id="chart-ops"></div>
+      </div>
+
+      <!-- Por UDN donut -->
+      <div class="chart-card">
+        <div class="chart-title">Distribución por UDN</div>
+        <div class="donut-wrap">
+          <svg id="donut-svg" width="130" height="130" viewBox="0 0 130 130"></svg>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
+
+      <!-- Top 10 vehículos -->
+      <div class="chart-card full">
+        <div class="chart-title">Top 10 vehículos — tiempo ralentí (min)</div>
+        <div class="bar-chart" id="chart-veh"></div>
+      </div>
+
+    </div>
+
+    <!-- Table -->
+    <div class="table-card" id="table-card" style="display:none">
+      <div class="table-header">
+        <div class="chart-title" style="margin-bottom:0">Detalle de eventos</div>
+        <input class="table-search" id="tbl-search" placeholder="Buscar en tabla..." oninput="renderTable()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Operador</th>
+              <th>UDN</th>
+              <th>Vehículo</th>
+              <th>Cliente</th>
+              <th>Inicio</th>
+              <th>Duración</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty" id="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <p>Carga un archivo CSV para ver el análisis</p>
+      <small>Formato: Ralenti_DD-MM-YYYY.csv</small>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── State ──
+let allRows = [];
+let filtered = [];
+let page = 1;
+const PAGE_SIZE = 50;
+
+// ── CSV Parser ──
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, ''));
+  return lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    return obj;
+  });
+}
+
+// Duration "HH:MM:SS" → minutes (float)
+function durToMin(d) {
+  if (!d) return 0;
+  const p = d.split(':').map(Number);
+  if (p.length === 3) return p[0] * 60 + p[1] + p[2] / 60;
+  if (p.length === 2) return p[0] + p[1] / 60;
+  return 0;
+}
+
+function fmtMin(m) {
+  const h = Math.floor(m / 60);
+  const min = Math.round(m % 60);
+  return h > 0 ? `${h}h ${min}m` : `${min} min`;
+}
+
+// ── File load ──
+document.getElementById('file-input').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadData(ev.target.result, f.name);
+  reader.readAsText(ev => {}, f);
+  reader.readAsText(f);
+});
+
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadData(ev.target.result, f.name);
+  reader.readAsText(f);
+});
+
+function loadData(text, fname) {
+  allRows = parseCSV(text).filter(r => r['Duration']);
+  filtered = [...allRows];
+  // Date from filename or first row
+  const dateMatch = fname.match(/(\d{2}-\d{2}-\d{4})/);
+  document.getElementById('topbar-date').textContent = dateMatch
+    ? `Fecha: ${dateMatch[1]}` : (allRows[0]?.START_TIME?.split(' ')[0] || fname);
+
+  // Populate vehicle group filter
+  const vgroups = [...new Set(allRows.map(r => r['Vehicle Group']).filter(Boolean))].sort();
+  const sel = document.getElementById('f-vgroup');
+  sel.innerHTML = '<option value="">Todos</option>';
+  vgroups.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; sel.appendChild(o); });
+
+  // Show UI
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('filters').style.display = 'flex';
+  document.getElementById('kpi-grid').style.display = 'grid';
+  document.getElementById('charts-row').style.display = 'grid';
+  document.getElementById('table-card').style.display = 'block';
+
+  render();
+}
+
+function applyFilters() {
+  const udn = document.getElementById('f-udn').value.toLowerCase();
+  const drv = document.getElementById('f-driver').value.toLowerCase();
+  const durMin = parseFloat(document.getElementById('f-durmin').value) || 0;
+  const vg = document.getElementById('f-vgroup').value.toLowerCase();
+  filtered = allRows.filter(r => {
+    const rowUdn = (r['Driver Group'] || '').toLowerCase();
+    const rowDrv = (r['Driver Name'] || '').toLowerCase();
+    const rowDur = durToMin(r['Duration']);
+    const rowVg = (r['Vehicle Group'] || '').toLowerCase();
+    return (!udn || rowUdn === udn)
+        && (!drv || rowDrv.includes(drv))
+        && rowDur >= durMin
+        && (!vg || rowVg === vg);
+  });
+  page = 1;
+  render();
+}
+
+function resetFilters() {
+  document.getElementById('f-udn').value = '';
+  document.getElementById('f-driver').value = '';
+  document.getElementById('f-durmin').value = '0';
+  document.getElementById('f-vgroup').value = '';
+  filtered = [...allRows];
+  page = 1;
+  render();
+}
+
+// ── Render ──
+function render() {
+  renderKPIs();
+  renderBarOps();
+  renderBarVeh();
+  renderDonut();
+  renderTable();
+}
+
+function renderKPIs() {
+  const total = filtered.length;
+  const totalMin = filtered.reduce((s, r) => s + durToMin(r['Duration']), 0);
+  const prom = total ? totalMin / total : 0;
+  const vehs = new Set(filtered.map(r => r['Vehicle Number'])).size;
+  const ops = new Set(filtered.filter(r => r['Driver Name'] && r['Driver Name'] !== 'NA').map(r => r['Driver Name'])).size;
+
+  document.getElementById('kpi-total').textContent = total.toLocaleString('es-MX');
+  document.getElementById('kpi-tiempo').textContent = fmtMin(totalMin);
+  document.getElementById('kpi-prom').textContent = prom.toFixed(1) + ' min';
+  document.getElementById('kpi-veh').textContent = vehs.toLocaleString('es-MX');
+  document.getElementById('kpi-ops').textContent = ops.toLocaleString('es-MX');
+}
+
+function renderBarOps() {
+  // Aggregate by driver
+  const map = {};
+  filtered.filter(r => r['Driver Name'] && r['Driver Name'] !== 'NA').forEach(r => {
+    const k = r['Driver Name'];
+    map[k] = (map[k] || 0) + durToMin(r['Duration']);
+  });
+  const sorted = Object.entries(map).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const max = sorted[0]?.[1] || 1;
+  const el = document.getElementById('chart-ops');
+  el.innerHTML = sorted.map(([name, mins], i) => {
+    const pct = (mins / max * 100).toFixed(1);
+    const cls = i < 3 ? 'danger' : i < 6 ? 'warn' : '';
+    return `<div class="bar-row">
+      <div class="bar-label" title="${name}">${name}</div>
+      <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="bar-val">${fmtMin(mins)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderBarVeh() {
+  const map = {};
+  filtered.forEach(r => {
+    const k = r['Vehicle Number'];
+    map[k] = (map[k] || 0) + durToMin(r['Duration']);
+  });
+  const sorted = Object.entries(map).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const max = sorted[0]?.[1] || 1;
+  const el = document.getElementById('chart-veh');
+  el.innerHTML = sorted.map(([veh, mins], i) => {
+    const pct = (mins / max * 100).toFixed(1);
+    const cls = i < 3 ? 'danger' : i < 6 ? 'warn' : '';
+    return `<div class="bar-row">
+      <div class="bar-label"># ${veh}</div>
+      <div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="bar-val">${fmtMin(mins)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDonut() {
+  const udns = ['SETTEPI MTY', 'SETTEPI MTY Garcia', 'LIPU MONTERREY'];
+  const colors = ['#84cc16', '#f59e0b', '#3b82f6'];
+  const counts = udns.map(u => filtered.filter(r => r['Driver Group'] === u).length);
+  const total = counts.reduce((a,b) => a+b, 0) || 1;
+
+  const svg = document.getElementById('donut-svg');
+  const cx = 65, cy = 65, r = 48, w = 20;
+  let start = -Math.PI / 2;
+  let paths = '';
+  counts.forEach((c, i) => {
+    const angle = (c / total) * 2 * Math.PI;
+    const end = start + angle;
+    const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+    const x2 = cx + r * Math.cos(end),   y2 = cy + r * Math.sin(end);
+    const xi1 = cx + (r-w) * Math.cos(start), yi1 = cy + (r-w) * Math.sin(start);
+    const xi2 = cx + (r-w) * Math.cos(end),   yi2 = cy + (r-w) * Math.sin(end);
+    const la = angle > Math.PI ? 1 : 0;
+    if (c > 0) paths += `<path d="M${x1},${y1} A${r},${r} 0 ${la} 1 ${x2},${y2} L${xi2},${yi2} A${r-w},${r-w} 0 ${la} 0 ${xi1},${yi1} Z" fill="${colors[i]}" opacity="0.9"/>`;
+    start = end;
+  });
+  svg.innerHTML = paths + `<text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="13" font-weight="800" fill="#1f2937">${total}</text>`;
+
+  const legend = document.getElementById('donut-legend');
+  legend.innerHTML = udns.map((u, i) => {
+    const pct = total ? ((counts[i]/total)*100).toFixed(0) : 0;
+    return `<div class="legend-item"><div class="legend-dot" style="background:${colors[i]}"></div><span>${u}<br><small style="color:#9ca3af">${counts[i]} eventos (${pct}%)</small></span></div>`;
+  }).join('');
+}
+
+function renderTable() {
+  const search = document.getElementById('tbl-search').value.toLowerCase();
+  let rows = filtered;
+  if (search) {
+    rows = rows.filter(r =>
+      (r['Driver Name']||'').toLowerCase().includes(search) ||
+      (r['Vehicle Number']||'').toLowerCase().includes(search) ||
+      (r['Driver Group']||'').toLowerCase().includes(search) ||
+      (r['Vehicle Group']||'').toLowerCase().includes(search)
+    );
+  }
+  const total = rows.length;
+  const pages = Math.ceil(total / PAGE_SIZE) || 1;
+  if (page > pages) page = pages;
+  const slice = rows.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = slice.map((r, idx) => {
+    const mins = durToMin(r['Duration']);
+    const durCls = mins >= 20 ? 'dur-high' : mins >= 10 ? 'dur-mid' : 'dur-low';
+    const udn = r['Driver Group'] || '';
+    let badge = 'badge-na';
+    if (udn === 'SETTEPI MTY') badge = 'badge-stp';
+    else if (udn === 'SETTEPI MTY Garcia') badge = 'badge-garcia';
+    else if (udn === 'LIPU MONTERREY') badge = 'badge-lipu';
+    const nombre = r['Driver Name'] === 'NA' || !r['Driver Name'] ? '<span style="color:#9ca3af">Sin asignar</span>' : r['Driver Name'];
+    return `<tr>
+      <td style="color:#9ca3af">${(page-1)*PAGE_SIZE+idx+1}</td>
+      <td>${nombre}</td>
+      <td><span class="badge ${badge}">${udn || 'N/A'}</span></td>
+      <td>${r['Vehicle Number']}</td>
+      <td>${r['Vehicle Group']||'—'}</td>
+      <td>${r['START_TIME']||'—'}</td>
+      <td class="${durCls}">${r['Duration']}</td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const pag = document.getElementById('pagination');
+  let html = `<span class="page-info">${total.toLocaleString('es-MX')} registros</span>`;
+  const maxP = Math.min(pages, 7);
+  for (let p2 = 1; p2 <= pages; p2++) {
+    if (pages > 7 && p2 > 3 && p2 < pages - 2) { if (p2 === 4) html += `<span class="page-info">…</span>`; continue; }
+    html += `<button class="page-btn${p2===page?' active':''}" onclick="goPage(${p2})">${p2}</button>`;
+  }
+  pag.innerHTML = html;
+}
+
+function goPage(p2) { page = p2; renderTable(); }
+</script>
+</body>
+</html>
