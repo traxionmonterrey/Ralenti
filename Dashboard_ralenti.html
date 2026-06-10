@@ -327,9 +327,29 @@ function parseCSV(text) {
 
 function durToMin(d) {
   if (!d) return 0;
+  // Normalize non-breaking spaces and other whitespace variants
+  d = d.replace(/[\u00A0\u202F]/g, ' ').trim();
+
+  // Detect AM/PM variants (e.g. "12:07:34 a. m.", "12:07:34 AM", "12:07:34 p.m.", "12:07:34 a.m.")
+  const ampmMatch = d.match(/^(\d{1,2}):(\d{2}):(\d{2})\s*([ap])\.?\s*\.?m\.?$/i);
+  if (ampmMatch) {
+    let h = parseInt(ampmMatch[1], 10);
+    const min = parseInt(ampmMatch[2], 10);
+    const sec = parseInt(ampmMatch[3], 10);
+    const isPM = ampmMatch[4].toLowerCase() === 'p';
+    // Duration encoded as a "time of day": 12:xx a.m. = 00:xx (just past midnight),
+    // 12:xx p.m. = 12:xx (12h+). Since durations are always < 24h and typically
+    // small, treat 12 a.m. as 0h and 12 p.m. as 12h.
+    if (h === 12) h = 0;
+    if (isPM) h += 12;
+    return h * 60 + min + sec / 60;
+  }
+
+  // Plain HH:MM:SS or HH:MM (24h)
   const p = d.split(':').map(Number);
-  if (p.length === 3) return p[0] * 60 + p[1] + p[2] / 60;
-  if (p.length === 2) return p[0] + p[1] / 60;
+  if (p.length === 3 && !isNaN(p[0])) return p[0] * 60 + p[1] + p[2] / 60;
+  if (p.length === 2 && !isNaN(p[0])) return p[0] + p[1] / 60;
+
   return parseFloat(d) || 0;
 }
 
@@ -635,7 +655,7 @@ function renderMap() {
       '<b>' + (r['Driver Name'] || 'Sin asignar') + '</b><br>' +
       'Vehículo: ' + r['Vehicle Number'] + '<br>' +
       'UDN: ' + (r['Driver Group'] || 'N/A') + '<br>' +
-      'Duración: ' + r['Duration'] + '<br>' +
+      'Duración: ' + fmtMin(mins) + '<br>' +
       'Inicio: ' + r['START_TIME'] + '<br>' +
       (r['Start Location'] ? 'Lugar: ' + r['Start Location'] : '')
     );
@@ -699,7 +719,7 @@ function renderTable() {
       '<td>' + r['Vehicle Number'] + '</td>' +
       '<td>' + (r['Vehicle Group']||'—') + '</td>' +
       '<td>' + (r['START_TIME']||'—') + '</td>' +
-      '<td class="' + durCls + '">' + r['Duration'] + '</td>' +
+      '<td class="' + durCls + '">' + fmtMin(mins) + '</td>' +
     '</tr>';
   }).join('');
 
