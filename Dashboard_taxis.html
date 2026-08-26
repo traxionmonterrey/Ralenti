@@ -73,9 +73,12 @@ body{font-family:'Segoe UI',Tahoma,Verdana,sans-serif;background:var(--fondo);co
 .card{background:var(--blanco);border-radius:11px;padding:19px 21px;border:1px solid var(--linea);}
 .card h3{font-size:14px;font-weight:800;margin-bottom:3px;}
 .card .desc{font-size:12px;color:var(--gris);margin-bottom:15px;}
+.card .nota{font-size:12px;color:#b91c1c;background:#fef2f2;border-left:3px solid var(--rojo);
+            padding:9px 12px;border-radius:0 6px 6px 0;margin-top:14px;line-height:1.5;}
+.card .nota:empty{display:none;}
 .lienzo{position:relative;height:290px;}
 .lienzo.alto{height:360px;}
-.lienzo.cascada{height:330px;}
+.lienzo.cascada{height:370px;}
 
 /* ---------- Tablas ---------- */
 table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -174,8 +177,9 @@ tbody tr:hover{background:#fafafa;}
     <div class="seccion-titulo">De dónde sale el dinero y a dónde llega</div>
     <div class="card">
       <h3>Cascada de recuperación</h3>
-      <p class="desc">Del gasto total, solo se tiene informacion de cobro del rubro <b>Cargo Operador</b>. De ahí,
-         cuánto ya se convirtió en descuento y cuánto de ese descuento ya entró vía nómina.</p>
+      <p class="desc">Primero el gasto total se abre en todos los rubros de responsabilidad. Solo el rubro
+         <b>Cargo Operador</b> tiene información de cobro; de ahí se sigue cuánto se convirtió en descuento
+         y cuánto ya entró vía nómina.</p>
       <div class="lienzo cascada"><canvas id="cCascada"></canvas></div>
     </div>
 
@@ -192,8 +196,10 @@ tbody tr:hover{background:#fafafa;}
     <div class="grid g3">
       <div class="card">
         <h3>Responsabilidad del gasto</h3>
-        <p class="desc">Quién absorbe el costo según la clasificación capturada.</p>
+        <p class="desc">Quién absorbe el costo según la columna <b>Tipo de Taxi</b>, que es donde se
+           clasifica a quién se le carga.</p>
         <div class="lienzo"><canvas id="cResp"></canvas></div>
+        <p class="nota" id="notaUber"></p>
       </div>
       <div class="card">
         <h3>Proveedor</h3>
@@ -346,6 +352,7 @@ async function iniciar(){
       motivo:     limpia(f['MOTIVO']) || 'Sin motivo',
       monto:      aNumero(f['MONTO']),
       proveedor:  limpia(f['PROVEEDOR DE TAXI']) || 'Sin proveedor',
+      esUber:     limpia(f['PROVEEDOR DE TAXI']).toLowerCase().includes('uber'),
       autoriza:   limpia(f['AUTORIZADO POR']) || '—',
       resp:       claseResp(f['TIPO DE TAXI']),
       respRaw:    limpia(f['TIPO DE TAXI']) || 'Sin registro',
@@ -471,6 +478,7 @@ function pintar(){
   const total     = g.reduce((s,f) => s + f.monto, 0);
   const cargoOp   = g.filter(f => f.resp === 'Operador').reduce((s,f) => s + f.monto, 0);
   const sinResp   = g.filter(f => f.resp === 'Sin responsable').reduce((s,f) => s + f.monto, 0);
+  const sinRespUber = g.filter(f => f.resp === 'Sin responsable' && f.esUber).reduce((s,f) => s + f.monto, 0);
   const asignado  = c.reduce((s,f) => s + f.monto, 0);      // ya se le cargó al operador
   const liquidado = c.reduce((s,f) => s + f.pagado, 0);     // ya se le descontó en nómina
   const pendiente = c.reduce((s,f) => s + f.pendiente, 0);  // falta por liquidar
@@ -488,13 +496,15 @@ function pintar(){
   txt('kPend', hayCobro ? pesos(pendiente) : '—');
   txt('kPendPie', hayCobro ? c.length.toLocaleString('es-MX') + ' descuentos en curso' : 'sin datos de cobro');
   txt('kFuga', pesos(sinResp));
-  txt('kFugaPie', pct(sinResp,total).toFixed(0) + '% del gasto sin responsable');
+  txt('kFugaPie', pct(sinResp,total).toFixed(0) + '% del gasto · ' +
+                  pct(sinRespUber, sinResp).toFixed(0) + '% de esto es Uber sin clasificar');
   txt('kTicket', g.length ? pesos(total/g.length) : '$0');
   txt('kTicketPie', 'promedio por servicio');
 
-  cascada(total, cargoOp, asignado, liquidado, pendiente, hayCobro);
+  cascada(g, cargoOp, asignado, liquidado, pendiente, hayCobro);
   porSemana(g);
   dona('cResp', agrupar(g,'resp'), true);
+  notaUber(sinResp, sinRespUber, total, g);
   dona('cProv', agrupar(g,'proveedor'), false);
   barras('cUdn', agrupar(g,'udn'), false, COLORES.tinta);
   barras('cMotivos', agrupar(g,'motivo').slice(0,8), true, COLORES.ambar);
@@ -503,6 +513,18 @@ function pintar(){
   tablaResponsables('tJefes', g, c, 'jefe', hayCobro);
   tablaOperadores(c, hayCobro);
   tablaEventos(g);
+}
+
+function notaUber(sinResp, sinRespUber, total, g){
+  const nodo = document.getElementById('notaUber');
+  if (!sinResp){ nodo.textContent = ''; return; }
+  const uber = g.filter(f => f.esUber).reduce((s,f) => s + f.monto, 0);
+  nodo.innerHTML =
+    '<b>' + pesos(sinResp) + '</b> (' + pct(sinResp,total).toFixed(0) + '% del gasto) llega sin ' +
+    'responsable. De eso, <b>' + pct(sinRespUber, sinResp).toFixed(0) + '%</b> es Uber: esos viajes ' +
+    'entran sin la columna <b>Tipo de Taxi</b>, así que nadie define a quién se le carga y el monto ' +
+    'no puede recuperarse. Hoy queda sin clasificar el ' + pct(sinRespUber, uber).toFixed(0) +
+    '% de todo lo que se gasta en Uber.';
 }
 
 const txt = (id,v) => document.getElementById(id).textContent = v;
@@ -528,21 +550,37 @@ const EJE_DINERO = {
 };
 const EJE_TEXTO = { ticks:{ font:{size:11}, color:'#6b7280' }, grid:{display:false}, border:{display:false} };
 
-/* Cascada: gasto → recuperable → asignado → liquidado / pendiente */
-function cascada(total, cargoOp, asignado, liquidado, pendiente, hayCobro){
-  destruir('cCascada');
-  const noRecup = total - cargoOp;
+/* Cascada: desglosa el gasto total por rubro de responsabilidad y luego
+   sigue el rubro Operador hasta el dinero que ya entró vía nómina. */
+const TONO_RESP = {'Operador':COLORES.azul, 'Sin responsable':COLORES.rojo,
+  'Mantenimiento':COLORES.ambar, 'Empresa':COLORES.morado,
+  'Operaciones':COLORES.lima, 'Otro':COLORES.gris};
+const ROTULO_RESP = {'Sin responsable':'Sin\nresponsable', 'Mantenimiento':'Mtto /\nTaller',
+  'Operaciones':'Opera-\nciones', 'Empresa':'Empresa', 'Otro':'Otro'};
 
-  const etiquetas = ['Gasto total','Absorbe la\noperación','Cargo a\noperador'];
-  const base   = [0, cargoOp, 0];
-  const valor  = [total, noRecup, cargoOp];
-  const tonos  = [COLORES.tinta, COLORES.rojo, COLORES.azul];
+function cascada(g, cargoOp, asignado, liquidado, pendiente, hayCobro){
+  destruir('cCascada');
+  const total = g.reduce((s,f) => s + f.monto, 0);
+
+  const etiquetas = ['Gasto\ntotal'], base = [0], valor = [total], tonos = [COLORES.tinta];
+
+  // Cada rubro distinto de Operador se resta del total, uno por uno
+  let corriendo = total;
+  agrupar(g,'resp').filter(([k]) => k !== 'Operador').forEach(([k,v]) => {
+    corriendo -= v;
+    etiquetas.push(ROTULO_RESP[k] || k);
+    base.push(corriendo); valor.push(v); tonos.push(TONO_RESP[k] || COLORES.gris);
+  });
+
+  // Lo que queda es el rubro recuperable
+  etiquetas.push('Cargo a\noperador');
+  base.push(0); valor.push(cargoOp); tonos.push(COLORES.azul);
 
   if (hayCobro){
     const sinAsignar = Math.max(cargoOp - asignado, 0);
     if (sinAsignar > 0){
-      etiquetas.push('Sin cobro\nasignado'); base.push(asignado);
-      valor.push(sinAsignar); tonos.push(COLORES.grisC);
+      etiquetas.push('Sin cobro\nasignado');
+      base.push(asignado); valor.push(sinAsignar); tonos.push(COLORES.grisC);
     }
     etiquetas.push('Cobro\nasignado','Ya\nliquidado','Falta por\nliquidar');
     base.push(0, 0, liquidado);
@@ -554,16 +592,16 @@ function cascada(total, cargoOp, asignado, liquidado, pendiente, hayCobro){
     type:'bar',
     data:{ labels: etiquetas, datasets:[
       { data: base, backgroundColor:'transparent', stack:'c' },
-      { data: valor, backgroundColor: tonos, borderRadius:5, stack:'c', maxBarThickness:88 }
+      { data: valor, backgroundColor: tonos, borderRadius:5, stack:'c', maxBarThickness:74 }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
         tooltip:{ filter: i => i.datasetIndex === 1,
-                  callbacks:{ label: i => pesos(i.raw) } }
+                  callbacks:{ label: i => pesos(i.raw) + '  ·  ' + pct(i.raw,total).toFixed(1) + '% del gasto' } }
       },
-      scales:{ x:{...EJE_TEXTO, stacked:true, ticks:{...EJE_TEXTO.ticks, font:{size:11}}},
+      scales:{ x:{...EJE_TEXTO, stacked:true, ticks:{...EJE_TEXTO.ticks, font:{size:10.5}}},
                y:{...EJE_DINERO, stacked:true, beginAtZero:true} }
     }
   });
