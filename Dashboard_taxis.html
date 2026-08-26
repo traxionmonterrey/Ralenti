@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traxión | Taxis · Gasto y Recuperación</title>
+<link rel="icon" type="image/svg+xml" href="favicon-traxion.svg">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --tinta:#1f2937; --tinta2:#374151; --gris:#6b7280; --gris2:#9ca3af;
+  --linea:#e5e7eb; --fondo:#f3f4f6; --blanco:#ffffff;
+  --lima:#84cc16; --lima-d:#65a30d;
+  --ambar:#f59e0b; --rojo:#dc2626; --azul:#0ea5e9; --morado:#7c3aed;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Verdana,sans-serif;background:var(--fondo);color:var(--tinta);}
+
+/* ---------- Encabezado ---------- */
+.top{background:var(--tinta);color:#fff;padding:18px 26px;display:flex;align-items:center;
+     justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.top .brand{display:flex;align-items:center;gap:14px;}
+.top h1{font-size:20px;letter-spacing:3px;font-weight:900;color:var(--lima);}
+.top .sub{font-size:12px;color:var(--gris2);letter-spacing:1px;text-transform:uppercase;font-weight:700;}
+.top .acciones{display:flex;gap:10px;align-items:center;}
+.btn{background:transparent;border:1px solid #4b5563;color:#e5e7eb;padding:8px 14px;border-radius:8px;
+     font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.2s;}
+.btn:hover{border-color:var(--lima);color:var(--lima);}
+.btn:focus-visible{outline:2px solid var(--lima);outline-offset:2px;}
+.volver{color:#e5e7eb;text-decoration:none;font-size:13px;font-weight:600;}
+.volver:hover{color:var(--lima);}
+
+/* ---------- Filtros ---------- */
+.filtros{background:var(--blanco);border-bottom:1px solid var(--linea);padding:14px 26px;
+         display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;position:sticky;top:0;z-index:20;}
+.campo{display:flex;flex-direction:column;gap:5px;}
+.campo label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--gris);font-weight:700;}
+.campo select{padding:8px 11px;border:1px solid var(--linea);border-radius:7px;background:var(--blanco);
+              font-family:inherit;font-size:13px;color:var(--tinta);min-width:155px;cursor:pointer;}
+.campo select:focus-visible{outline:2px solid var(--lima);outline-offset:1px;}
+.limpiar{margin-left:auto;background:var(--fondo);border:1px solid var(--linea);color:var(--gris);
+         padding:8px 14px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.limpiar:hover{border-color:var(--gris2);color:var(--tinta);}
+
+/* ---------- Layout ---------- */
+.wrap{padding:22px 26px 50px;max-width:1560px;margin:0 auto;}
+.seccion-titulo{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gris);
+                font-weight:800;margin:30px 0 12px;display:flex;align-items:center;gap:10px;}
+.seccion-titulo::after{content:'';flex:1;height:1px;background:var(--linea);}
+
+/* ---------- KPIs ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;}
+.kpi{background:var(--blanco);border-radius:11px;padding:17px 19px;border:1px solid var(--linea);
+     border-left:4px solid var(--gris2);}
+.kpi .et{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--gris);font-weight:700;}
+.kpi .val{font-size:29px;font-weight:800;margin:7px 0 3px;letter-spacing:-1px;line-height:1;}
+.kpi .pie{font-size:12px;color:var(--gris);font-weight:500;}
+.kpi.gasto{border-left-color:var(--tinta);}
+.kpi.recup{border-left-color:var(--lima);}
+.kpi.recup .val{color:var(--lima-d);}
+.kpi.liq{border-left-color:var(--azul);}
+.kpi.liq .val{color:#0369a1;}
+.kpi.pend{border-left-color:var(--ambar);}
+.kpi.pend .val{color:#b45309;}
+.kpi.fuga{border-left-color:var(--rojo);}
+.kpi.fuga .val{color:var(--rojo);}
+.kpi.neutro{border-left-color:var(--azul);}
+
+/* ---------- Tarjetas / gráficas ---------- */
+.grid{display:grid;gap:16px;}
+.g2{grid-template-columns:repeat(auto-fit,minmax(430px,1fr));}
+.g3{grid-template-columns:repeat(auto-fit,minmax(330px,1fr));}
+.card{background:var(--blanco);border-radius:11px;padding:19px 21px;border:1px solid var(--linea);}
+.card h3{font-size:14px;font-weight:800;margin-bottom:3px;}
+.card .desc{font-size:12px;color:var(--gris);margin-bottom:15px;}
+.lienzo{position:relative;height:290px;}
+.lienzo.alto{height:360px;}
+.lienzo.cascada{height:330px;}
+
+/* ---------- Tablas ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--gris);
+   font-weight:800;padding:8px 9px;border-bottom:2px solid var(--linea);white-space:nowrap;}
+td{padding:9px;border-bottom:1px solid var(--linea);}
+tbody tr:hover{background:#fafafa;}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.fuerte{font-weight:700;}
+.barra-celda{position:relative;}
+.barra-celda .fill{position:absolute;left:0;top:0;bottom:0;background:rgba(132,204,22,.16);border-radius:3px;}
+.barra-celda span{position:relative;}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;}
+.pill.ok{background:#ecfccb;color:#4d7c0f;}
+.pill.medio{background:#fef3c7;color:#b45309;}
+.pill.malo{background:#fee2e2;color:#b91c1c;}
+.pill.na{background:var(--fondo);color:var(--gris);}
+.scroll{max-height:420px;overflow-y:auto;}
+
+/* ---------- Estados ---------- */
+.aviso{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:9px;
+       padding:13px 17px;font-size:13px;margin-bottom:16px;line-height:1.55;}
+.aviso b{font-weight:800;}
+.cargando{text-align:center;padding:70px 20px;color:var(--gris);font-size:14px;}
+.spinner{width:26px;height:26px;border:3px solid var(--linea);border-top-color:var(--lima);
+         border-radius:50%;animation:giro .8s linear infinite;margin:0 auto 14px;}
+@keyframes giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}*{transition:none!important}}
+.oculto{display:none!important;}
+.sindatos{padding:40px;text-align:center;color:var(--gris2);font-size:13px;}
+
+@media(max-width:760px){
+  .wrap{padding:16px 14px 40px;}
+  .filtros{padding:12px 14px;position:static;}
+  .campo select{min-width:135px;}
+  .kpi .val{font-size:25px;}
+  .g2,.g3{grid-template-columns:1fr;}
+  .lienzo{height:250px;}
+}
+@media print{
+  .filtros,.acciones{display:none;}
+  .card,.kpi{break-inside:avoid;border:1px solid #ccc;}
+  body{background:#fff;}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div>
+      <h1>TRAXIÓN</h1>
+      <div class="sub">Taxis · Gasto y Recuperación</div>
+    </div>
+  </div>
+  <div class="acciones">
+    <span id="sello" style="font-size:12px;color:var(--gris2)"></span>
+    <a href="index.html" class="volver">← Inicio</a>
+    <button class="btn" onclick="window.print()">Imprimir / PDF</button>
+  </div>
+</header>
+
+<div class="filtros" id="filtros">
+  <div class="campo"><label for="fUdn">Unidad de negocio</label><select id="fUdn"></select></div>
+  <div class="campo"><label for="fGerente">Gerente</label><select id="fGerente"></select></div>
+  <div class="campo"><label for="fJefe">Jefe</label><select id="fJefe"></select></div>
+  <div class="campo"><label for="fZona">Zona</label><select id="fZona"></select></div>
+  <div class="campo"><label for="fMes">Mes</label><select id="fMes"></select></div>
+  <div class="campo"><label for="fProv">Proveedor</label><select id="fProv"></select></div>
+  <button class="limpiar" id="btnLimpiar">Limpiar filtros</button>
+</div>
+
+<main class="wrap">
+
+  <div id="cargando" class="cargando">
+    <div class="spinner"></div>
+    Cargando información de taxis…
+  </div>
+
+  <div id="tablero" class="oculto">
+
+    <div id="avisoCobro" class="aviso oculto"></div>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi gasto"><div class="et">Gasto total</div><div class="val" id="kGasto">—</div><div class="pie" id="kGastoPie">—</div></div>
+      <div class="kpi neutro"><div class="et">Cargo a operador</div><div class="val" id="kCargo">—</div><div class="pie" id="kCargoPie">recuperable vía nómina</div></div>
+      <div class="kpi recup"><div class="et">Cobro asignado</div><div class="val" id="kRecup">—</div><div class="pie" id="kRecupPie">—</div></div>
+      <div class="kpi liq"><div class="et">Ya liquidado</div><div class="val" id="kLiq">—</div><div class="pie" id="kLiqPie">—</div></div>
+      <div class="kpi pend"><div class="et">Falta por liquidar</div><div class="val" id="kPend">—</div><div class="pie" id="kPendPie">—</div></div>
+      <div class="kpi fuga"><div class="et">Sin responsable asignado</div><div class="val" id="kFuga">—</div><div class="pie" id="kFugaPie">—</div></div>
+      <div class="kpi"><div class="et">Costo por evento</div><div class="val" id="kTicket">—</div><div class="pie" id="kTicketPie">—</div></div>
+    </div>
+
+    <!-- Cascada -->
+    <div class="seccion-titulo">De dónde sale el dinero y a dónde llega</div>
+    <div class="card">
+      <h3>Cascada de recuperación</h3>
+      <p class="desc">Del gasto total, solo lo clasificado como <b>Cargo Operador</b> es recuperable. De ahí,
+         cuánto ya se convirtió en descuento y cuánto de ese descuento ya entró vía nómina.</p>
+      <div class="lienzo cascada"><canvas id="cCascada"></canvas></div>
+    </div>
+
+    <!-- Tendencia -->
+    <div class="seccion-titulo">Comportamiento en el tiempo</div>
+    <div class="card">
+      <h3>Gasto por semana</h3>
+      <p class="desc">Barras: gasto de la semana, separado por proveedor. Línea: gasto acumulado.</p>
+      <div class="lienzo alto"><canvas id="cSemana"></canvas></div>
+    </div>
+
+    <!-- Cortes -->
+    <div class="seccion-titulo">Dónde se concentra</div>
+    <div class="grid g3">
+      <div class="card">
+        <h3>Responsabilidad del gasto</h3>
+        <p class="desc">Quién absorbe el costo según la clasificación capturada.</p>
+        <div class="lienzo"><canvas id="cResp"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Proveedor</h3>
+        <p class="desc">Taxi contratado contra Uber.</p>
+        <div class="lienzo"><canvas id="cProv"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Unidad de negocio</h3>
+        <p class="desc">Gasto acumulado por UDN.</p>
+        <div class="lienzo"><canvas id="cUdn"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <h3>Motivos que más cuestan</h3>
+        <p class="desc">Los 8 motivos con mayor gasto acumulado.</p>
+        <div class="lienzo alto"><canvas id="cMotivos"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Plantas más afectadas</h3>
+        <p class="desc">Las 10 plantas con mayor gasto acumulado.</p>
+        <div class="lienzo alto"><canvas id="cPlantas"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Responsables -->
+    <div class="seccion-titulo">Quién lo provoca y quién lo recupera</div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Gerentes</h3>
+        <p class="desc"><b>% gestión</b> = del gasto cargado a operador, cuánto ya se convirtió en descuento.
+           <b>Liquidado</b> es lo que ya entró vía nómina y avanza semana a semana.</p>
+        <div class="scroll"><table id="tGerentes"></table></div>
+      </div>
+      <div class="card">
+        <h3>Jefes de operación</h3>
+        <p class="desc">Mismo corte, un nivel más abajo. Cruce por jefe, gerente y UDN, no evento por evento.</p>
+        <div class="scroll"><table id="tJefes"></table></div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <h3>Operadores con mayor cobro</h3>
+        <p class="desc">Adeudo cargado a cada operador y cuánto lleva liquidado en nómina.</p>
+        <div class="scroll"><table id="tOperadores"></table></div>
+      </div>
+      <div class="card">
+        <h3>Eventos de mayor monto</h3>
+        <p class="desc">Los 15 servicios individuales más caros del periodo filtrado.</p>
+        <div class="scroll"><table id="tEventos"></table></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONFIGURACIÓN — cambiar aquí las fuentes de datos
+   ══════════════════════════════════════════════════════════════ */
+const CSV_GASTO = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm_ke4d-DpNrGL4Fde_lEmc3shZN7AhX5Afq911kjeHd7o9zrwuouFxswA_LAE4ZWAYdl7whefRLkY/pub?output=csv';
+
+// Pegar aquí el link publicado (Archivo → Compartir → Publicar en la web →
+// pestaña "Cobro Operadores" → formato CSV). Si se deja vacío, el tablero
+// funciona igual pero los indicadores de recuperación aparecen sin dato.
+const CSV_COBRO = '';
+
+/* ══════════════════════════════════════════════════════════════ */
+
+const COLORES = {
+  tinta:'#1f2937', lima:'#84cc16', limaD:'#65a30d', ambar:'#f59e0b',
+  rojo:'#dc2626', azul:'#0ea5e9', morado:'#7c3aed', gris:'#9ca3af', grisC:'#d1d5db'
+};
+const PALETA = ['#84cc16','#0ea5e9','#f59e0b','#7c3aed','#dc2626','#14b8a6','#f97316','#6366f1','#a3a3a3','#059669'];
+
+let GASTO = [], COBRO = [], graficas = {};
+const IDS_FILTRO = {fUdn:'udn', fGerente:'gerente', fJefe:'jefe', fZona:'zona', fMes:'mes', fProv:'proveedor'};
+
+/* ---------- Utilidades ---------- */
+const pesos = n => '$' + Math.round(n).toLocaleString('es-MX');
+const pesosCorto = n => {
+  const a = Math.abs(n);
+  if (a >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+  if (a >= 1e3) return '$' + Math.round(n/1e3) + 'k';
+  return '$' + Math.round(n);
+};
+const pct = (a,b) => b > 0 ? (a/b*100) : 0;
+const limpia = s => (s||'').toString().trim();
+
+function aNumero(txt){
+  if (txt === null || txt === undefined) return 0;
+  const n = parseFloat(txt.toString().replace(/[$,\s]/g,''));
+  return isNaN(n) ? 0 : n;
+}
+
+function parseCSV(texto){
+  const filas = []; let campo = '', fila = [], comillas = false;
+  texto = texto.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  for (let i = 0; i < texto.length; i++){
+    const c = texto[i];
+    if (comillas){
+      if (c === '"'){ if (texto[i+1] === '"'){ campo += '"'; i++; } else comillas = false; }
+      else campo += c;
+    } else {
+      if (c === '"') comillas = true;
+      else if (c === ','){ fila.push(campo); campo = ''; }
+      else if (c === '\n'){ fila.push(campo); filas.push(fila); fila = []; campo = ''; }
+      else campo += c;
+    }
+  }
+  if (campo !== '' || fila.length){ fila.push(campo); filas.push(fila); }
+  if (!filas.length) return [];
+  const cab = filas[0].map(h => limpia(h));
+  return filas.slice(1)
+    .filter(f => f.some(v => limpia(v) !== ''))
+    .map(f => { const o = {}; cab.forEach((h,i) => o[h] = limpia(f[i])); return o; });
+}
+
+/* Normaliza la columna de responsabilidad (viene con variantes de captura) */
+function claseResp(txt){
+  const t = limpia(txt).toLowerCase();
+  if (!t || t.includes('sin registro')) return 'Sin responsable';
+  if (t.includes('operador')) return 'Operador';
+  if (t.includes('mtto') || t.includes('mantenimiento') || t.includes('taller')) return 'Mantenimiento';
+  if (t.includes('operaciones')) return 'Operaciones';
+  if (t.includes('empresa')) return 'Empresa';
+  return 'Otro';
+}
+
+const ORDEN_MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+/* ---------- Carga ---------- */
+async function bajarCSV(url){
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return parseCSV(await r.text());
+}
+
+async function iniciar(){
+  try {
+    const crudo = await bajarCSV(CSV_GASTO);
+    GASTO = crudo.map(f => ({
+      fecha:      limpia(f['FECHA']),
+      semana:     parseInt(f['Semana']) || 0,
+      mes:        limpia(f['MES']),
+      planta:     limpia(f['PLANTA AFECTADA']) || 'Sin planta',
+      reporta:    limpia(f['PERSONA A LA QUE SE REPORTA']) || '—',
+      motivo:     limpia(f['MOTIVO']) || 'Sin motivo',
+      monto:      aNumero(f['MONTO']),
+      proveedor:  limpia(f['PROVEEDOR DE TAXI']) || 'Sin proveedor',
+      autoriza:   limpia(f['AUTORIZADO POR']) || '—',
+      resp:       claseResp(f['TIPO DE TAXI']),
+      respRaw:    limpia(f['TIPO DE TAXI']) || 'Sin registro',
+      zona:       limpia(f['ZONA']) || 'Sin zona',
+      jefe:       limpia(f['Jefe']) || 'Sin jefe',
+      gerente:    limpia(f['Gerente']) || 'Sin gerente',
+      udn:        limpia(f['Unidad de negocio']) || 'Sin UDN'
+    })).filter(f => f.monto > 0);
+  } catch(e){
+    document.getElementById('cargando').innerHTML =
+      '<b>No se pudo leer la hoja de Gasto Taxis.</b><br><br>' +
+      'Revisa que el archivo siga publicado en la web como CSV.<br>' +
+      '<span style="font-size:12px;color:#9ca3af">' + e.message + '</span>';
+    return;
+  }
+
+  // Mapa semana → mes, para poder ubicar los cobros en el tiempo
+  const semanaMes = {};
+  GASTO.forEach(f => { if (f.semana && f.mes && !semanaMes[f.semana]) semanaMes[f.semana] = f.mes; });
+
+  if (CSV_COBRO){
+    try {
+      const crudo = await bajarCSV(CSV_COBRO);
+      COBRO = crudo.map(f => ({
+        nomina:    limpia(f['Nomina']),
+        nombre:    limpia(f['Nombre']) || 'Sin nombre',
+        puesto:    limpia(f['Puesto']) || '—',
+        tipo:      limpia(f['Tipo de Descuento']) || 'Sin tipo',
+        monto:     aNumero(f['Monto']),
+        semana:    parseInt(f['Semana']) || 0,
+        pagado:    aNumero(f['Saldo Pagado']),
+        pendiente: aNumero(f['Saldo a Pendiente']),
+        jefe:      limpia(f['Jefe']) || 'Sin jefe',
+        gerente:   limpia(f['Gerente']) || 'Sin gerente',
+        udn:       limpia(f['Unidad de negocio']) || 'Sin UDN'
+      })).filter(f => f.monto > 0);
+      COBRO.forEach(c => c.mes = semanaMes[c.semana] || '');
+    } catch(e){
+      avisar('No se pudo leer la hoja <b>Cobro Operadores</b> (' + e.message +
+             '). El tablero muestra solo el gasto.');
+    }
+  } else {
+    avisar('Falta conectar la pestaña <b>Cobro Operadores</b>. Publícala en la web como CSV y ' +
+           'pega el link en la variable <b>CSV_COBRO</b> al inicio del archivo para activar los ' +
+           'indicadores de recuperación.');
+  }
+
+  document.getElementById('sello').textContent =
+    'Actualizado ' + new Date().toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+
+  armarFiltros();
+  document.getElementById('cargando').classList.add('oculto');
+  document.getElementById('tablero').classList.remove('oculto');
+  pintar();
+}
+
+function avisar(html){
+  const a = document.getElementById('avisoCobro');
+  a.innerHTML = html; a.classList.remove('oculto');
+}
+
+/* ---------- Filtros (opciones en cascada, sin perder la selección válida) ---------- */
+function armarFiltros(){
+  Object.keys(IDS_FILTRO).forEach(id => {
+    document.getElementById(id).addEventListener('change', () => { refrescarOpciones(); pintar(); });
+  });
+  document.getElementById('btnLimpiar').addEventListener('click', () => {
+    Object.keys(IDS_FILTRO).forEach(id => document.getElementById(id).value = '');
+    refrescarOpciones(); pintar();
+  });
+  refrescarOpciones();
+}
+
+function seleccion(){
+  const s = {};
+  Object.entries(IDS_FILTRO).forEach(([id,campo]) => {
+    const v = document.getElementById(id).value;
+    if (v) s[campo] = v;
+  });
+  return s;
+}
+
+function aplicar(datos, criterios){
+  return datos.filter(f => Object.entries(criterios).every(([k,v]) => f[k] === v));
+}
+
+function refrescarOpciones(){
+  const sel = seleccion();
+  Object.entries(IDS_FILTRO).forEach(([id,campo]) => {
+    const otros = {...sel}; delete otros[campo];
+    let vals = [...new Set(aplicar(GASTO, otros).map(f => f[campo]))];
+    vals.sort(campo === 'mes'
+      ? (a,b) => ORDEN_MES.indexOf(a) - ORDEN_MES.indexOf(b)
+      : (a,b) => a.localeCompare(b,'es'));
+    const nodo = document.getElementById(id);
+    const actual = nodo.value;
+    nodo.innerHTML = '<option value="">Todas</option>' +
+      vals.map(v => '<option value="' + v + '">' + v + '</option>').join('');
+    nodo.value = vals.includes(actual) ? actual : '';
+  });
+}
+
+/* Los cobros solo comparten UDN, gerente, jefe y mes con el gasto */
+function cobrosFiltrados(sel){
+  const c = {};
+  ['udn','gerente','jefe','mes'].forEach(k => { if (sel[k]) c[k] = sel[k]; });
+  return aplicar(COBRO, c);
+}
+
+/* ---------- Render ---------- */
+function pintar(){
+  const sel = seleccion();
+  const g = aplicar(GASTO, sel);
+  const c = cobrosFiltrados(sel);
+
+  const total     = g.reduce((s,f) => s + f.monto, 0);
+  const cargoOp   = g.filter(f => f.resp === 'Operador').reduce((s,f) => s + f.monto, 0);
+  const sinResp   = g.filter(f => f.resp === 'Sin responsable').reduce((s,f) => s + f.monto, 0);
+  const asignado  = c.reduce((s,f) => s + f.monto, 0);      // ya se le cargó al operador
+  const liquidado = c.reduce((s,f) => s + f.pagado, 0);     // ya se le descontó en nómina
+  const pendiente = c.reduce((s,f) => s + f.pendiente, 0);  // falta por liquidar
+  const hayCobro  = c.length > 0;
+
+  // KPIs
+  txt('kGasto', pesos(total));
+  txt('kGastoPie', g.length.toLocaleString('es-MX') + ' eventos · ' + rango(g));
+  txt('kCargo', pesos(cargoOp));
+  txt('kCargoPie', pct(cargoOp,total).toFixed(0) + '% del gasto es recuperable');
+  txt('kRecup', hayCobro ? pesos(asignado) : '—');
+  txt('kRecupPie', hayCobro ? pct(asignado, cargoOp).toFixed(0) + '% de lo cargado a operador' : 'sin datos de cobro');
+  txt('kLiq', hayCobro ? pesos(liquidado) : '—');
+  txt('kLiqPie', hayCobro ? pct(liquidado, asignado).toFixed(0) + '% del cobro asignado' : 'sin datos de cobro');
+  txt('kPend', hayCobro ? pesos(pendiente) : '—');
+  txt('kPendPie', hayCobro ? c.length.toLocaleString('es-MX') + ' descuentos en curso' : 'sin datos de cobro');
+  txt('kFuga', pesos(sinResp));
+  txt('kFugaPie', pct(sinResp,total).toFixed(0) + '% del gasto sin responsable · no recuperable');
+  txt('kTicket', g.length ? pesos(total/g.length) : '$0');
+  txt('kTicketPie', 'promedio por servicio');
+
+  cascada(total, cargoOp, asignado, liquidado, pendiente, hayCobro);
+  porSemana(g);
+  dona('cResp', agrupar(g,'resp'), true);
+  dona('cProv', agrupar(g,'proveedor'), false);
+  barras('cUdn', agrupar(g,'udn'), false, COLORES.tinta);
+  barras('cMotivos', agrupar(g,'motivo').slice(0,8), true, COLORES.ambar);
+  barras('cPlantas', agrupar(g,'planta').slice(0,10), true, COLORES.azul);
+  tablaResponsables('tGerentes', g, c, 'gerente', hayCobro);
+  tablaResponsables('tJefes', g, c, 'jefe', hayCobro);
+  tablaOperadores(c, hayCobro);
+  tablaEventos(g);
+}
+
+const txt = (id,v) => document.getElementById(id).textContent = v;
+
+function rango(g){
+  const ss = g.map(f => f.semana).filter(Boolean);
+  if (!ss.length) return 'sin periodo';
+  const a = Math.min(...ss), b = Math.max(...ss);
+  return a === b ? ('semana ' + a) : ('semanas ' + a + '–' + b);
+}
+
+function agrupar(datos, campo){
+  const m = {};
+  datos.forEach(f => m[f[campo]] = (m[f[campo]] || 0) + f.monto);
+  return Object.entries(m).sort((a,b) => b[1]-a[1]);
+}
+
+function destruir(id){ if (graficas[id]){ graficas[id].destroy(); delete graficas[id]; } }
+
+const EJE_DINERO = {
+  ticks:{ callback: v => pesosCorto(v), font:{size:11}, color:'#6b7280' },
+  grid:{ color:'#f3f4f6' }, border:{display:false}
+};
+const EJE_TEXTO = { ticks:{ font:{size:11}, color:'#6b7280' }, grid:{display:false}, border:{display:false} };
+
+/* Cascada: gasto → recuperable → asignado → liquidado / pendiente */
+function cascada(total, cargoOp, asignado, liquidado, pendiente, hayCobro){
+  destruir('cCascada');
+  const noRecup = total - cargoOp;
+
+  const etiquetas = ['Gasto total','Absorbe la\noperación','Cargo a\noperador'];
+  const base   = [0, cargoOp, 0];
+  const valor  = [total, noRecup, cargoOp];
+  const tonos  = [COLORES.tinta, COLORES.rojo, COLORES.azul];
+
+  if (hayCobro){
+    const sinAsignar = Math.max(cargoOp - asignado, 0);
+    if (sinAsignar > 0){
+      etiquetas.push('Sin cobro\nasignado'); base.push(asignado);
+      valor.push(sinAsignar); tonos.push(COLORES.grisC);
+    }
+    etiquetas.push('Cobro\nasignado','Ya\nliquidado','Falta por\nliquidar');
+    base.push(0, 0, liquidado);
+    valor.push(asignado, liquidado, pendiente);
+    tonos.push(COLORES.morado, COLORES.lima, COLORES.ambar);
+  }
+
+  graficas['cCascada'] = new Chart(document.getElementById('cCascada'), {
+    type:'bar',
+    data:{ labels: etiquetas, datasets:[
+      { data: base, backgroundColor:'transparent', stack:'c' },
+      { data: valor, backgroundColor: tonos, borderRadius:5, stack:'c', maxBarThickness:88 }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ filter: i => i.datasetIndex === 1,
+                  callbacks:{ label: i => pesos(i.raw) } }
+      },
+      scales:{ x:{...EJE_TEXTO, stacked:true, ticks:{...EJE_TEXTO.ticks, font:{size:11}}},
+               y:{...EJE_DINERO, stacked:true, beginAtZero:true} }
+    }
+  });
+}
+
+function porSemana(g){
+  destruir('cSemana');
+  const provs = [...new Set(g.map(f => f.proveedor))];
+  const semanas = [...new Set(g.map(f => f.semana))].filter(Boolean).sort((a,b) => a-b);
+  const total = {}; semanas.forEach(s => total[s] = 0);
+
+  const sets = provs.map((p,i) => ({
+    label: p, type:'bar', stack:'s', borderRadius:3,
+    backgroundColor: p.toLowerCase().includes('uber') ? COLORES.tinta : COLORES.lima,
+    data: semanas.map(s => {
+      const v = g.filter(f => f.semana === s && f.proveedor === p).reduce((a,f) => a+f.monto, 0);
+      total[s] += v; return v;
+    })
+  }));
+
+  let acum = 0;
+  sets.push({
+    label:'Acumulado', type:'line', yAxisID:'y2', borderColor: COLORES.morado,
+    backgroundColor:'transparent', borderWidth:2, pointRadius:2.5, tension:.3,
+    data: semanas.map(s => acum += total[s])
+  });
+
+  graficas['cSemana'] = new Chart(document.getElementById('cSemana'), {
+    data:{ labels: semanas.map(s => 'S' + s), datasets: sets },
+    options:{
+      responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:11,font:{size:12},usePointStyle:true,pointStyle:'circle'}},
+        tooltip:{ callbacks:{ label: i => i.dataset.label + ': ' + pesos(i.raw) } }
+      },
+      scales:{
+        x:{...EJE_TEXTO, stacked:true},
+        y:{...EJE_DINERO, stacked:true, beginAtZero:true, title:{display:true,text:'Gasto semanal',font:{size:11},color:'#9ca3af'}},
+        y2:{ position:'right', beginAtZero:true, grid:{display:false}, border:{display:false},
+             ticks:{ callback: v => pesosCorto(v), font:{size:11}, color: COLORES.morado } }
+      }
+    }
+  });
+}
+
+function dona(id, pares, esResp){
+  destruir(id);
+  const tonos = esResp
+    ? pares.map(([k]) => ({'Operador':COLORES.azul,'Sin responsable':COLORES.rojo,
+        'Mantenimiento':COLORES.ambar,'Empresa':COLORES.morado,'Operaciones':COLORES.lima}[k] || COLORES.gris))
+    : pares.map((_,i) => [COLORES.lima, COLORES.tinta, COLORES.azul, COLORES.ambar][i % 4]);
+  const suma = pares.reduce((s,p) => s+p[1], 0);
+
+  graficas[id] = new Chart(document.getElementById(id), {
+    type:'doughnut',
+    data:{ labels: pares.map(p => p[0]), datasets:[{ data: pares.map(p => p[1]),
+           backgroundColor: tonos, borderWidth:2, borderColor:'#fff' }] },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:11,font:{size:12},usePointStyle:true,pointStyle:'circle',padding:11}},
+        tooltip:{ callbacks:{ label: i => i.label + ': ' + pesos(i.raw) + ' (' + pct(i.raw,suma).toFixed(0) + '%)' } }
+      }
+    }
+  });
+}
+
+function barras(id, pares, horizontal, color){
+  destruir(id);
+  graficas[id] = new Chart(document.getElementById(id), {
+    type:'bar',
+    data:{ labels: pares.map(p => p[0]), datasets:[{ data: pares.map(p => p[1]),
+           backgroundColor: color, borderRadius:4, maxBarThickness:34 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      indexAxis: horizontal ? 'y' : 'x',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: i => pesos(i.raw) } } },
+      scales: horizontal
+        ? { x:{...EJE_DINERO, beginAtZero:true}, y:{...EJE_TEXTO} }
+        : { x:{...EJE_TEXTO}, y:{...EJE_DINERO, beginAtZero:true} }
+    }
+  });
+}
+
+function pill(p, hay){
+  if (!hay) return '<span class="pill na">—</span>';
+  const c = p >= 60 ? 'ok' : p >= 25 ? 'medio' : 'malo';
+  return '<span class="pill ' + c + '">' + p.toFixed(0) + '%</span>';
+}
+
+function tablaResponsables(id, g, c, campo, hayCobro){
+  const vacio = () => ({gasto:0, cargo:0, eventos:0, asignado:0, liquidado:0, pend:0});
+  const m = {};
+  g.forEach(f => {
+    m[f[campo]] = m[f[campo]] || vacio();
+    m[f[campo]].gasto += f.monto;
+    m[f[campo]].eventos++;
+    if (f.resp === 'Operador') m[f[campo]].cargo += f.monto;
+  });
+  c.forEach(f => {
+    m[f[campo]] = m[f[campo]] || vacio();
+    m[f[campo]].asignado  += f.monto;
+    m[f[campo]].liquidado += f.pagado;
+    m[f[campo]].pend      += f.pendiente;
+  });
+
+  const filas = Object.entries(m).sort((a,b) => b[1].gasto - a[1].gasto);
+  const tope = filas.length ? filas[0][1].gasto : 1;
+  const tabla = document.getElementById(id);
+
+  if (!filas.length){ tabla.innerHTML = '<tbody><tr><td class="sindatos">Sin datos con los filtros actuales</td></tr></tbody>'; return; }
+
+  tabla.innerHTML =
+    '<thead><tr><th>' + (campo === 'gerente' ? 'Gerente' : 'Jefe') + '</th>' +
+    '<th class="num">Gasto</th><th class="num">Eventos</th><th class="num">Cargo operador</th>' +
+    '<th class="num">Cobro asignado</th><th class="num">% gestión</th><th class="num">Liquidado</th></tr></thead><tbody>' +
+    filas.map(([n,v]) =>
+      '<tr><td class="barra-celda"><div class="fill" style="width:' + (v.gasto/tope*100) + '%"></div>' +
+      '<span class="fuerte">' + n + '</span></td>' +
+      '<td class="num fuerte">' + pesos(v.gasto) + '</td>' +
+      '<td class="num">' + v.eventos + '</td>' +
+      '<td class="num">' + pesos(v.cargo) + '</td>' +
+      '<td class="num">' + (hayCobro ? pesos(v.asignado) : '—') + '</td>' +
+      '<td class="num">' + pill(pct(v.asignado, v.cargo), hayCobro && v.cargo > 0) + '</td>' +
+      '<td class="num">' + (hayCobro ? pesos(v.liquidado) : '—') + '</td></tr>'
+    ).join('') + '</tbody>';
+}
+
+function tablaOperadores(c, hayCobro){
+  const t = document.getElementById('tOperadores');
+  if (!hayCobro){
+    t.innerHTML = '<tbody><tr><td class="sindatos">Conecta la pestaña Cobro Operadores para ver este ranking</td></tr></tbody>';
+    return;
+  }
+  const m = {};
+  c.forEach(f => {
+    const k = f.nombre;
+    m[k] = m[k] || {monto:0, pagado:0, pend:0, n:0, tipo:f.tipo, jefe:f.jefe};
+    m[k].monto += f.monto; m[k].pagado += f.pagado; m[k].pend += f.pendiente; m[k].n++;
+  });
+  const filas = Object.entries(m).sort((a,b) => b[1].monto - a[1].monto).slice(0,20);
+  const tope = filas.length ? filas[0][1].monto : 1;
+
+  t.innerHTML =
+    '<thead><tr><th>Operador</th><th>Jefe</th><th class="num">Adeudo total</th>' +
+    '<th class="num">Liquidado</th><th class="num">Pendiente</th><th class="num">Avance</th></tr></thead><tbody>' +
+    filas.map(([n,v]) =>
+      '<tr><td class="barra-celda"><div class="fill" style="width:' + (v.monto/tope*100) + '%"></div>' +
+      '<span class="fuerte">' + n + '</span></td>' +
+      '<td style="color:#6b7280">' + v.jefe + '</td>' +
+      '<td class="num fuerte">' + pesos(v.monto) + '</td>' +
+      '<td class="num">' + pesos(v.pagado) + '</td>' +
+      '<td class="num">' + pesos(v.pend) + '</td>' +
+      '<td class="num">' + pill(pct(v.pagado, v.monto), v.monto > 0) + '</td></tr>'
+    ).join('') + '</tbody>';
+}
+
+function tablaEventos(g){
+  const filas = [...g].sort((a,b) => b.monto - a.monto).slice(0,15);
+  const t = document.getElementById('tEventos');
+  if (!filas.length){ t.innerHTML = '<tbody><tr><td class="sindatos">Sin datos con los filtros actuales</td></tr></tbody>'; return; }
+  t.innerHTML =
+    '<thead><tr><th>Fecha</th><th>Planta</th><th>Motivo</th><th>Responsable</th><th class="num">Monto</th></tr></thead><tbody>' +
+    filas.map(f =>
+      '<tr><td style="white-space:nowrap">' + f.fecha + '</td>' +
+      '<td class="fuerte">' + f.planta + '</td>' +
+      '<td>' + f.motivo + '</td>' +
+      '<td style="color:#6b7280">' + f.resp + '</td>' +
+      '<td class="num fuerte">' + pesos(f.monto) + '</td></tr>'
+    ).join('') + '</tbody>';
+}
+
+iniciar();
+</script>
+</body>
+</html>
