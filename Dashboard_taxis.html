@@ -195,7 +195,7 @@ tbody tr:hover{background:#fafafa;}
     <div class="seccion-titulo">Dónde se concentra</div>
     <div class="grid g3">
       <div class="card">
-        <h3>Responsabilidad del gasto</h3>
+        <h3>Responsabilidad</h3>
         <p class="desc">Quién absorbe el costo según la columna <b>Tipo de Taxi</b>, que es donde se
            clasifica a quién se le carga.</p>
         <div class="lienzo"><canvas id="cResp"></canvas></div>
@@ -518,13 +518,10 @@ function pintar(){
 function notaUber(sinResp, sinRespUber, total, g){
   const nodo = document.getElementById('notaUber');
   if (!sinResp){ nodo.textContent = ''; return; }
-  const uber = g.filter(f => f.esUber).reduce((s,f) => s + f.monto, 0);
   nodo.innerHTML =
     '<b>' + pesos(sinResp) + '</b> (' + pct(sinResp,total).toFixed(0) + '% del gasto) llega sin ' +
     'responsable. De eso, <b>' + pct(sinRespUber, sinResp).toFixed(0) + '%</b> es Uber: esos viajes ' +
-    'entran sin la columna <b>Tipo de Taxi</b>, así que nadie define a quién se le carga y el monto ' +
-    'no puede recuperarse. Hoy queda sin clasificar el ' + pct(sinRespUber, uber).toFixed(0) +
-    '% de todo lo que se gasta en Uber.';
+    'no cuentan con una clasificación de quién absorbe el costo del servicio.';
 }
 
 const txt = (id,v) => document.getElementById(id).textContent = v;
