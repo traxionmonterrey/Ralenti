@@ -174,7 +174,7 @@ tbody tr:hover{background:#fafafa;}
     <div class="seccion-titulo">De dónde sale el dinero y a dónde llega</div>
     <div class="card">
       <h3>Cascada de recuperación</h3>
-      <p class="desc">Del gasto total, solo lo clasificado como <b>Cargo Operador</b> es recuperable. De ahí,
+      <p class="desc">Del gasto total, solo se tiene informacion de cobro del rubro <b>Cargo Operador</b>. De ahí,
          cuánto ya se convirtió en descuento y cuánto de ese descuento ya entró vía nómina.</p>
       <div class="lienzo cascada"><canvas id="cCascada"></canvas></div>
     </div>
@@ -488,7 +488,7 @@ function pintar(){
   txt('kPend', hayCobro ? pesos(pendiente) : '—');
   txt('kPendPie', hayCobro ? c.length.toLocaleString('es-MX') + ' descuentos en curso' : 'sin datos de cobro');
   txt('kFuga', pesos(sinResp));
-  txt('kFugaPie', pct(sinResp,total).toFixed(0) + '% del gasto sin responsable · no recuperable');
+  txt('kFugaPie', pct(sinResp,total).toFixed(0) + '% del gasto sin responsable');
   txt('kTicket', g.length ? pesos(total/g.length) : '$0');
   txt('kTicketPie', 'promedio por servicio');
 
