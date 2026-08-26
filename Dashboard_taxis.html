@@ -258,10 +258,9 @@ tbody tr:hover{background:#fafafa;}
    ══════════════════════════════════════════════════════════════ */
 const CSV_GASTO = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm_ke4d-DpNrGL4Fde_lEmc3shZN7AhX5Afq911kjeHd7o9zrwuouFxswA_LAE4ZWAYdl7whefRLkY/pub?output=csv';
 
-// Pegar aquí el link publicado (Archivo → Compartir → Publicar en la web →
-// pestaña "Cobro Operadores" → formato CSV). Si se deja vacío, el tablero
-// funciona igual pero los indicadores de recuperación aparecen sin dato.
-const CSV_COBRO = '';
+// Pestaña "Cobro Operadores" del mismo archivo publicado.
+// Ojo: el parámetro gid solo funciona acompañado de single=true.
+const CSV_COBRO = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm_ke4d-DpNrGL4Fde_lEmc3shZN7AhX5Afq911kjeHd7o9zrwuouFxswA_LAE4ZWAYdl7whefRLkY/pub?gid=1215406767&single=true&output=csv';
 
 /* ══════════════════════════════════════════════════════════════ */
 
@@ -287,6 +286,7 @@ const limpia = s => (s||'').toString().trim();
 
 function aNumero(txt){
   if (txt === null || txt === undefined) return 0;
+  // La hoja usa "$-" como cero contable y a veces deja negativos de redondeo
   const n = parseFloat(txt.toString().replace(/[$,\s]/g,''));
   return isNaN(n) ? 0 : n;
 }
@@ -362,9 +362,15 @@ async function iniciar(){
     return;
   }
 
-  // Mapa semana → mes, para poder ubicar los cobros en el tiempo
-  const semanaMes = {};
-  GASTO.forEach(f => { if (f.semana && f.mes && !semanaMes[f.semana]) semanaMes[f.semana] = f.mes; });
+/* La hoja de cobro no trae fecha, solo el número de semana. El calendario
+   operativo arranca en domingo (semana 1 = 28-dic-2025), así que ubicamos
+   cada semana en el mes donde cae su jueves, que es el mes dominante. */
+const SEMANA_1 = Date.UTC(2025, 11, 28);
+function mesDeSemana(n){
+  if (!n) return '';
+  const d = new Date(SEMANA_1 + ((n-1)*7 + 4) * 86400000);
+  return ORDEN_MES[d.getUTCMonth()];
+}
 
   if (CSV_COBRO){
     try {
@@ -376,13 +382,14 @@ async function iniciar(){
         tipo:      limpia(f['Tipo de Descuento']) || 'Sin tipo',
         monto:     aNumero(f['Monto']),
         semana:    parseInt(f['Semana']) || 0,
+        plazo:     parseInt(f['Semanas a Descontar']) || 0,
         pagado:    aNumero(f['Saldo Pagado']),
-        pendiente: aNumero(f['Saldo a Pendiente']),
+        pendiente: Math.max(aNumero(f['Saldo a Pendiente']), 0),
         jefe:      limpia(f['Jefe']) || 'Sin jefe',
         gerente:   limpia(f['Gerente']) || 'Sin gerente',
         udn:       limpia(f['Unidad de negocio']) || 'Sin UDN'
       })).filter(f => f.monto > 0);
-      COBRO.forEach(c => c.mes = semanaMes[c.semana] || '');
+      COBRO.forEach(c => c.mes = mesDeSemana(c.semana));
     } catch(e){
       avisar('No se pudo leer la hoja <b>Cobro Operadores</b> (' + e.message +
              '). El tablero muestra solo el gasto.');
