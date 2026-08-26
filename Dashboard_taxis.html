@@ -170,7 +170,6 @@ tbody tr:hover{background:#fafafa;}
       <div class="kpi liq"><div class="et">Ya liquidado</div><div class="val" id="kLiq">—</div><div class="pie" id="kLiqPie">—</div></div>
       <div class="kpi pend"><div class="et">Falta por liquidar</div><div class="val" id="kPend">—</div><div class="pie" id="kPendPie">—</div></div>
       <div class="kpi fuga"><div class="et">Sin responsable asignado</div><div class="val" id="kFuga">—</div><div class="pie" id="kFugaPie">—</div></div>
-      <div class="kpi"><div class="et">Costo por evento</div><div class="val" id="kTicket">—</div><div class="pie" id="kTicketPie">—</div></div>
     </div>
 
     <!-- Cascada -->
@@ -195,7 +194,7 @@ tbody tr:hover{background:#fafafa;}
     <div class="seccion-titulo">Dónde se concentra</div>
     <div class="grid g3">
       <div class="card">
-        <h3>Responsabilidad</h3>
+        <h3>Responsabilidad del gasto</h3>
         <p class="desc">Quién absorbe el costo según la columna <b>Tipo de Taxi</b>, que es donde se
            clasifica a quién se le carga.</p>
         <div class="lienzo"><canvas id="cResp"></canvas></div>
@@ -498,8 +497,6 @@ function pintar(){
   txt('kFuga', pesos(sinResp));
   txt('kFugaPie', pct(sinResp,total).toFixed(0) + '% del gasto · ' +
                   pct(sinRespUber, sinResp).toFixed(0) + '% de esto es Uber sin clasificar');
-  txt('kTicket', g.length ? pesos(total/g.length) : '$0');
-  txt('kTicketPie', 'promedio por servicio');
 
   cascada(g, cargoOp, asignado, liquidado, pendiente, hayCobro);
   porSemana(g);
